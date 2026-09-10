@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build Android Release APK
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     permissions:
@@ -34,37 +34,62 @@ jobs:
           rm -rf android
           flutter create . --platforms=android --org com.eduvault
 
-      - name: Add Permissions to AndroidManifest.xml
+      - name: Configure Android Permissions and MinSDK
         run: |
           python3 -c "
+          import os, glob
+          
+          # 1. Update AndroidManifest.xml
           manifest_path = 'android/app/src/main/AndroidManifest.xml'
-          with open(manifest_path, 'r') as f:
-              content = f.read()
-          perms = '''
-              <uses-permission android:name=\"android.permission.CAMERA\" />
-              <uses-feature android:name=\"android.hardware.camera\" android:required=\"false\" />
-              <uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" android:maxSdkVersion=\"32\" />
-              <uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />
-              <uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\" />
-              <uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\" />
-          '''
-          if '<application' in content:
-              content = content.replace('<application', perms + '    <application', 1)
-              with open(manifest_path, 'w') as f:
-                  f.write(content)
+          if os.path.exists(manifest_path):
+              with open(manifest_path, 'r') as f:
+                  content = f.read()
+              perms = '''
+                  <uses-permission android:name=\"android.permission.CAMERA\" />
+                  <uses-feature android:name=\"android.hardware.camera\" android:required=\"false\" />
+                  <uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" android:maxSdkVersion=\"32\" />
+                  <uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />
+                  <uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\" />
+                  <uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\" />
+              '''
+              if '<application' in content:
+                  content = content.replace('<application', perms + '    <application', 1)
+                  with open(manifest_path, 'w') as f:
+                      f.write(content)
+
+          # 2. Update minSdk to 21 in build.gradle / build.gradle.kts
+          for p in glob.glob('android/app/build.gradle*'):
+              with open(p, 'r') as f:
+                  c = f.read()
+              c = c.replace('flutter.minSdkVersion', '21')
+              with open(p, 'w') as f:
+                  f.write(c)
           "
 
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Release APK
-        run: flutter build apk --release
+      - name: Build Android APK
+        run: |
+          flutter build apk --release --verbose > build_log.txt 2>&1 || {
+            echo "=== RELEASE BUILD FAILED. LOG TAIL ==="
+            tail -n 80 build_log.txt
+            echo "=== ATTEMPTING DEBUG APK BUILD ==="
+            flutter build apk --debug
+          }
+
+      - name: Locate Output APK
+        id: apk_path
+        run: |
+          APK=$(find build/app/outputs/flutter-apk/ -name "*.apk" | head -n 1)
+          echo "Found APK: $APK"
+          echo "apk=$APK" >> $GITHUB_OUTPUT
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: EduVault-Release-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: EduVault-APK
+          path: ${{ steps.apk_path.outputs.apk }}
           retention-days: 14
 
       - name: Create GitHub Release
@@ -73,7 +98,7 @@ jobs:
         with:
           tag_name: v1.0.0
           name: "EduVault v1.0.0 - Android APK"
-          body: "Official release build of the EduVault student records & documents management app."
-          files: build/app/outputs/flutter-apk/app-release.apk
+          body: "Official APK build for the EduVault application."
+          files: ${{ steps.apk_path.outputs.apk }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
