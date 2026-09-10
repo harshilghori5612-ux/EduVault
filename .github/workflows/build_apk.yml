@@ -54,18 +54,6 @@ jobs:
                   f.write(content)
           "
 
-      - name: Ensure minSdkVersion is 21 or higher
-        run: |
-          python3 -c "
-          gradle_path = 'android/app/build.gradle'
-          with open(gradle_path, 'r') as f:
-              content = f.read()
-          content = content.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 21')
-          content = content.replace('minSdk = flutter.minSdkVersion', 'minSdk = 21')
-          with open(gradle_path, 'w') as f:
-              f.write(content)
-          "
-
       - name: Install Dependencies
         run: flutter pub get
 
