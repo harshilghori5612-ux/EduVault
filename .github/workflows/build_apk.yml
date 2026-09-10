@@ -29,54 +29,42 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Generate Official Android Project Structure
+      - name: Recreate Clean Official Android Project
         run: |
+          rm -rf android
           flutter create . --platforms=android --org com.eduvault
 
-      - name: Restore Custom AndroidManifest Permissions
+      - name: Add Permissions to AndroidManifest.xml
         run: |
-          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.eduvault.app">
-              <uses-permission android:name="android.permission.CAMERA" />
-              <uses-feature android:name="android.hardware.camera" android:required="false" />
-              <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-              <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-              <application
-                  android:label="EduVault"
-                  android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher"
-                  android:requestLegacyExternalStorage="true">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-                      <meta-data
-                        android:name="io.flutter.embedding.android.NormalTheme"
-                        android:resource="@style/NormalTheme" />
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-                  <meta-data
-                      android:name="flutterEmbedding"
-                      android:value="2" />
-              </application>
-          </manifest>
-          EOF
+          python3 -c "
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest_path, 'r') as f:
+              content = f.read()
+          perms = '''
+              <uses-permission android:name=\"android.permission.CAMERA\" />
+              <uses-feature android:name=\"android.hardware.camera\" android:required=\"false\" />
+              <uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" android:maxSdkVersion=\"32\" />
+              <uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />
+              <uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\" />
+              <uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\" />
+          '''
+          if '<application' in content:
+              content = content.replace('<application', perms + '    <application', 1)
+              with open(manifest_path, 'w') as f:
+                  f.write(content)
+          "
 
-      - name: Ensure minSdkVersion 21
+      - name: Ensure minSdkVersion is 21 or higher
         run: |
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' android/app/build.gradle || true
+          python3 -c "
+          gradle_path = 'android/app/build.gradle'
+          with open(gradle_path, 'r') as f:
+              content = f.read()
+          content = content.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 21')
+          content = content.replace('minSdk = flutter.minSdkVersion', 'minSdk = 21')
+          with open(gradle_path, 'w') as f:
+              f.write(content)
+          "
 
       - name: Install Dependencies
         run: flutter pub get
@@ -84,7 +72,7 @@ jobs:
       - name: Build Release APK
         run: flutter build apk --release
 
-      - name: Upload APK to Artifacts
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: EduVault-Release-APK
