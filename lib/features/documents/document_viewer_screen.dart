@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/utils/date_formatter.dart';
@@ -32,7 +32,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   Future<void> _openWithSystemApp() async {
     final file = File(_doc.filePath);
     if (await file.exists()) {
-      final result = await OpenFile.open(_doc.filePath);
+      final result = await OpenFilex.open(_doc.filePath);
       if (result.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not open file: ${result.message}')),
