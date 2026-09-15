@@ -103,19 +103,24 @@ jobs:
       - name: Locate Output APK
         id: apk_path
         run: |
-          APK=$(find build/app/outputs/ -name "*.apk" | head -n 1)
+          echo "=== Searching for generated APK across entire workspace ==="
+          find . -type f -name "*.apk"
+          APK=$(find . -type f -name "*.apk" | grep -v "intermediates" | head -n 1)
           if [ -z "$APK" ]; then
-            echo "Error: No APK file found in build/app/outputs/"
+            echo "Error: Could not locate generated .apk file"
             exit 1
           fi
           echo "Found APK at: $APK"
-          echo "apk=$APK" >> $GITHUB_OUTPUT
+          mkdir -p release_output
+          cp "$APK" release_output/EduVault.apk
+          echo "Copied to release_output/EduVault.apk"
+          echo "apk=release_output/EduVault.apk" >> $GITHUB_OUTPUT
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: EduVault-Android-APK
-          path: ${{ steps.apk_path.outputs.apk }}
+          path: release_output/EduVault.apk
           retention-days: 14
 
       - name: Create or Update GitHub Release
@@ -124,7 +129,7 @@ jobs:
         with:
           tag_name: v1.0.0
           name: "EduVault v1.0.0 - Android APK"
-          body: "Official APK build for EduVault application. Download the APK file directly to your Android device and install it."
-          files: ${{ steps.apk_path.outputs.apk }}
+          body: "Official APK build for EduVault application. Download EduVault.apk directly to your Android device and install it."
+          files: release_output/EduVault.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
