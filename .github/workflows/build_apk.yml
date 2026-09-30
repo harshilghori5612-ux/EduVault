@@ -63,15 +63,21 @@ jobs:
               with open(p, 'r') as f:
                   c = f.read()
               # Kotlin DSL & Groovy DSL regex replacements
-              c = re.sub(r'minSdk\s*=.*', 'minSdk = 21', c)
-              c = re.sub(r'minSdkVersion\s+.*', 'minSdkVersion 21', c)
-              c = re.sub(r'compileSdk\s*=.*', 'compileSdk = 34', c)
-              c = re.sub(r'compileSdkVersion\s+.*', 'compileSdkVersion 34', c)
-              c = re.sub(r'targetSdk\s*=.*', 'targetSdk = 34', c)
-              c = re.sub(r'targetSdkVersion\s+.*', 'targetSdkVersion 34', c)
+              c = re.sub(r'minSdk\s*(=|\s)\s*.*', 'minSdk = 21', c)
+              c = re.sub(r'minSdkVersion\s*(=|\s)\s*.*', 'minSdkVersion 21', c)
+              c = re.sub(r'compileSdk\s*(=|\s)\s*.*', 'compileSdk = 36', c)
+              c = re.sub(r'compileSdkVersion\s*(=|\s)\s*.*', 'compileSdkVersion 36', c)
+              c = re.sub(r'targetSdk\s*(=|\s)\s*.*', 'targetSdk = 34', c)
+              c = re.sub(r'targetSdkVersion\s*(=|\s)\s*.*', 'targetSdkVersion 34', c)
               with open(p, 'w') as f:
                   f.write(c)
               print(f'Configured SDK versions in {p}.')
+
+          # 3. Suppress unsupported compileSdk warning/error if needed
+          prop_path = 'android/gradle.properties'
+          with open(prop_path, 'a') as f:
+              f.write('\nandroid.suppressUnsupportedCompileSdk=36\n')
+          print('Configured android.suppressUnsupportedCompileSdk=36 in gradle.properties.')
           "
 
       - name: Install Dependencies
