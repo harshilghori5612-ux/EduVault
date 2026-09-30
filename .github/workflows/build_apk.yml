@@ -79,6 +79,7 @@ jobs:
 
       - name: Build Android APK
         run: |
+          set -o pipefail
           echo "Starting APK build..."
           flutter build apk --debug --verbose 2>&1 | tee build_log.txt
 

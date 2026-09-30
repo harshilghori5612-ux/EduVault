@@ -50,7 +50,7 @@ class CustomButton extends StatelessWidget {
                 ),
               )
             : Row(
-                mainAxisAlignment: MainCenterAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
                     Icon(icon, size: 20),
